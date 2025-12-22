@@ -31,7 +31,6 @@ class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryE
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    // Log minimal error info
     console.warn("Gallery partially unavailable:", error.message);
   }
 
@@ -60,22 +59,19 @@ const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
       <color attach="background" args={[COLORS.background]} />
       
       {/* 
-         Environment: Crucial for Metalness: 1.0 to work. 
-         Without this, gold looks brown/black because there is nothing to reflect. 
-         'city' preset provides good contrast for metallic objects.
-         NOTE: No 'ground' prop to ensure infinite void.
+         【核心修改】国产化环境适配：
+         1. 移除了 preset="city" (因为它会去连接 GitHub 下载，导致国内黑屏)。
+         2. 改为 files="/env.hdr" (直接加载 public 文件夹下的本地文件)。
+         
+         务必确保你已经下载了一个 .hdr 文件，命名为 env.hdr 并放入 public 文件夹！
+         如果你暂时没有 hdr 文件，可以先把下面这行注释掉，画面会变暗，但不黑屏。
       */}
-      <Environment preset="city" />
+      <Environment files="/env.hdr" />
 
-      {/* 
-         Camera Adjustment:
-         - Adjusted Z to 17.
-         - Maintained Y=5 for good angle.
-      */}
       <PerspectiveCamera makeDefault position={[0, 5, 17]} fov={45} />
       
-      {/* Dynamic Ambient Light: Boost intensity from 0.6 to 1.1 when scattered */}
-      <ambientLight intensity={0.6 + wishProgress * 0.5} />
+      {/* 稍微增强一点环境光，防止 HDR 加载失败时全黑 */}
+      <ambientLight intensity={0.8 + wishProgress * 0.5} />
       
       <pointLight position={[10, 10, 10]} intensity={1.5} color={COLORS.gold} />
       <pointLight position={[-10, 5, -5]} intensity={1} color={COLORS.ruby} />
@@ -94,11 +90,6 @@ const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
         </Suspense>
       </GalleryErrorBoundary>
       
-      {/* 
-          REMOVED: Floor Mesh and ContactShadows to ensure "Infinite Void" look. 
-          The tree should float in darkness.
-      */}
-
       <OrbitControls 
         enablePan={false} 
         enableZoom={false} 
@@ -108,8 +99,6 @@ const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
         autoRotateSpeed={wishProgress > 0.5 ? 0.2 : 0.6}
         enabled={wishProgress < 0.1} 
         target={[0, 1, 0]}
-        // Limit max angle to ~85 degrees (Math.PI/2 - 0.1) to prevent looking exactly parallel to floor
-        // which can cause bottom particle clipping/z-fighting.
         maxPolarAngle={Math.PI / 2 - 0.1}
       />
     </Canvas>
