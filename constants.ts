@@ -11,14 +11,14 @@ export const COLORS = {
 
 // Real provided assets
 export const USER_PHOTOS = [
-  "https://s41.ax1x.com/2025/12/19/pZ1coqI.jpg",
-  "https://s41.ax1x.com/2025/12/19/pZ1cIsA.jpg",
-  "https://s41.ax1x.com/2025/12/19/pZ1c5Md.jpg",
-  "https://s41.ax1x.com/2025/12/19/pZ1chxH.jpg",
-  "https://s41.ax1x.com/2025/12/19/pZ1cfRe.jpg",
-  "https://s41.ax1x.com/2025/12/19/pZ1cWGD.jpg",
-  "https://s41.ax1x.com/2025/12/19/pZ1cRPO.jpg",
-  "https://s41.ax1x.com/2025/12/19/pZ1cgIK.jpg",
+  "/1.jpg",
+  "/2.jpg",
+  "/3.jpg",
+  "/4.jpg",
+  "/5.jpg",
+  "/6.jpg",
+  "/7.jpg",
+  "/8.jpg",
 ];
 
 // Reduced to 50k for better mobile stability, still looks very dense
