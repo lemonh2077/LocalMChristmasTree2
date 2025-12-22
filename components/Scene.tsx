@@ -1,10 +1,11 @@
 import React, { Suspense, Component, ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { PerspectiveCamera, OrbitControls, ContactShadows, Html } from '@react-three/drei';
+import { PerspectiveCamera, OrbitControls, Html, Environment } from '@react-three/drei';
 import TreeParticles from './TreeParticles';
 import Decorations from './Decorations';
 import PhotoGallery from './PhotoGallery';
 import { COLORS } from '../constants';
+import * as THREE from 'three';
 
 interface SceneProps {
   wishProgress: number;
@@ -55,20 +56,31 @@ class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryE
 
 const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
   return (
-    <Canvas dpr={[1, 2]} shadows gl={{ antialias: false }}>
+    <Canvas dpr={[1, 2]} shadows gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}>
       <color attach="background" args={[COLORS.background]} />
-      <PerspectiveCamera makeDefault position={[0, 2, 16]} fov={45} />
       
-      <ambientLight intensity={0.6} />
+      {/* 
+         Environment: Crucial for Metalness: 1.0 to work. 
+         Without this, gold looks brown/black because there is nothing to reflect. 
+         'city' preset provides good contrast for metallic objects.
+         NOTE: No 'ground' prop to ensure infinite void.
+      */}
+      <Environment preset="city" />
+
+      {/* 
+         Camera Adjustment:
+         - Adjusted Z to 17.
+         - Maintained Y=5 for good angle.
+      */}
+      <PerspectiveCamera makeDefault position={[0, 5, 17]} fov={45} />
+      
+      {/* Dynamic Ambient Light: Boost intensity from 0.6 to 1.1 when scattered */}
+      <ambientLight intensity={0.6 + wishProgress * 0.5} />
+      
       <pointLight position={[10, 10, 10]} intensity={1.5} color={COLORS.gold} />
       <pointLight position={[-10, 5, -5]} intensity={1} color={COLORS.ruby} />
       <pointLight position={[0, 0, 5]} intensity={0.5} color="#fff" />
       
-      {/* 
-          Split Suspense: 
-          1. TreeParticles and Decorations are procedural and instant -> Render immediately.
-          2. PhotoGallery loads images -> Wrapped in Suspense.
-      */}
       <TreeParticles wishProgress={wishProgress} />
       <Decorations wishProgress={wishProgress} />
       
@@ -82,35 +94,23 @@ const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
         </Suspense>
       </GalleryErrorBoundary>
       
-      {/* Floor logic: fades out during explosion */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -5.5, 0]} receiveShadow>
-        <planeGeometry args={[50, 50]} />
-        <meshStandardMaterial 
-          color="#050505" 
-          roughness={0.8} 
-          metalness={0.2}
-          transparent
-          opacity={1 - wishProgress * 0.9}
-        />
-      </mesh>
-      
-      <ContactShadows 
-        opacity={0.4 * (1 - wishProgress)} 
-        scale={20} 
-        blur={2.4} 
-        far={10} 
-        resolution={256} 
-        color="#000000" 
-      />
+      {/* 
+          REMOVED: Floor Mesh and ContactShadows to ensure "Infinite Void" look. 
+          The tree should float in darkness.
+      */}
 
       <OrbitControls 
         enablePan={false} 
         enableZoom={false} 
         minDistance={10} 
-        maxDistance={25} 
-        autoRotate={true} // Always auto-rotate background elements
-        autoRotateSpeed={wishProgress > 0.5 ? 0.3 : 0.6}
-        enabled={wishProgress < 0.1} // Allow user orbit only when in tree mode
+        maxDistance={35} 
+        autoRotate={true} 
+        autoRotateSpeed={wishProgress > 0.5 ? 0.2 : 0.6}
+        enabled={wishProgress < 0.1} 
+        target={[0, 1, 0]}
+        // Limit max angle to ~85 degrees (Math.PI/2 - 0.1) to prevent looking exactly parallel to floor
+        // which can cause bottom particle clipping/z-fighting.
+        maxPolarAngle={Math.PI / 2 - 0.1}
       />
     </Canvas>
   );

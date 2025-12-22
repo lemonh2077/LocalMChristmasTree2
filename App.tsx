@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Scene from './components/Scene';
+import BackgroundMusic from './components/BackgroundMusic';
 import { USER_PHOTOS } from './constants';
 
 const App: React.FC = () => {
   const [isExploded, setIsExploded] = useState(false);
   const [wishProgress, setWishProgress] = useState(0);
   const [heroIndex, setHeroIndex] = useState(0);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number | null>(null);
 
   // Swipe detection
   const touchStart = useRef<number | null>(null);
@@ -72,20 +72,23 @@ const App: React.FC = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Background Music Control - Now positioned via its own CSS lower down */}
+      <BackgroundMusic />
+
       {/* 3D Scene Layer */}
       <div className="absolute inset-0 z-0">
         <Scene wishProgress={wishProgress} heroIndex={heroIndex} />
       </div>
 
-      {/* Overlay UI */}
-      <div className={`absolute inset-0 pointer-events-none transition-all duration-1000 ${wishProgress > 0.8 ? 'bg-black/40' : 'bg-transparent'}`}>
-        {/* Header */}
-        <div className={`absolute top-12 left-0 right-0 text-center px-6 transition-transform duration-700 ${wishProgress > 0.5 ? '-translate-y-20 opacity-0' : 'translate-y-0 opacity-100'}`}>
+      {/* Overlay UI - Removed bg-black/40 dimming layer to keep scene bright */}
+      <div className="absolute inset-0 pointer-events-none transition-all duration-1000 bg-transparent">
+        {/* Header - Moved to top-8 (Swapped with Music Button Area) */}
+        <div className={`absolute top-8 left-0 right-0 text-center px-6 transition-transform duration-700 ${wishProgress > 0.5 ? '-translate-y-20 opacity-0' : 'translate-y-0 opacity-100'}`}>
           <h1 className="text-[#D4AF37] text-3xl font-bold tracking-widest drop-shadow-lg mb-2">
-            ROYAL EMERALD
+            Merry Christmas
           </h1>
           <p className="text-[#FDF5E6]/60 text-xs tracking-[0.2em] uppercase">
-            A Masterpiece of Winter Memories
+            A WINTER MEMORIES❄
           </p>
         </div>
 
@@ -98,8 +101,8 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Wish Interaction UI */}
-        <div className="absolute bottom-16 left-0 right-0 flex flex-col items-center pointer-events-auto">
+        {/* Dynamic Buttons Area - Positioned ABOVE the signature */}
+        <div className="absolute bottom-24 left-0 right-0 flex justify-center items-end pointer-events-auto z-10">
           {!isExploded ? (
             <button
               onClick={toggleExplosion}
@@ -112,27 +115,26 @@ const App: React.FC = () => {
               </div>
             </button>
           ) : (
-            <div className="flex flex-col items-center gap-8">
-               <p className="text-[#FDF5E6]/60 text-[10px] uppercase tracking-[0.3em] animate-pulse">
-                Swipe to browse gallery
-              </p>
-              <button
-                onClick={reset}
-                className="px-8 py-3 rounded-full border border-[#B22222]/50 bg-[#B22222]/10 backdrop-blur-md text-[#FDF5E6] text-xs font-bold tracking-[0.2em] uppercase transition-all active:scale-95 hover:bg-[#B22222]/20"
-              >
-                Reset Tree
-              </button>
-            </div>
+            <button
+              onClick={reset}
+              className="px-8 py-3 rounded-full border border-[#B22222]/50 bg-[#B22222]/10 backdrop-blur-md text-[#FDF5E6] text-xs font-bold tracking-[0.2em] uppercase transition-all active:scale-95 hover:bg-[#B22222]/20 shadow-[0_0_20px_rgba(178,34,34,0.4)]"
+            >
+              Reset Tree
+            </button>
           )}
-          
-          <p className={`mt-6 text-[#FDF5E6]/40 text-[10px] uppercase tracking-widest transition-opacity duration-300 ${isExploded ? 'opacity-0' : 'opacity-100'}`}>
-            Experience the royal scattering
+        </div>
+
+        {/* Static Footer Signature - Always fixed at the bottom */}
+        <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-auto z-10">
+          <p className={`text-[10px] uppercase tracking-[0.3em] drop-shadow-md transition-colors duration-500 ${isExploded ? 'text-[#FDF5E6]' : 'text-[#FDF5E6]/40'}`}>
+            By LEMONH 2025.12.25
           </p>
         </div>
+
       </div>
 
-      {/* Vignette effect */}
-      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
+      {/* Vignette effect - Reduced opacity to prevent edges from looking too dark */}
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.5)]" />
     </div>
   );
 };

@@ -1,7 +1,6 @@
-
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { COLORS, TREE_HEIGHT, TREE_RADIUS } from '../constants';
 
 interface DecorationsProps {
@@ -10,100 +9,404 @@ interface DecorationsProps {
 
 const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const ribbonRef = useRef<THREE.Points>(null);
-  const ribbonMatRef = useRef<THREE.PointsMaterial>(null);
+  const pearlsGroupRef = useRef<THREE.Group>(null);
+  const ribbonPointsRef = useRef<THREE.Points>(null);
+  const starRef = useRef<THREE.Mesh>(null);
+  
+  const scratchVec = useMemo(() => new THREE.Vector3(), []);
+  const scratchCamDir = useMemo(() => new THREE.Vector3(), []);
+  
+  const { camera } = useThree();
 
+  // --- LOCAL ASSET GENERATION ---
+  const particleTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.beginPath();
+    ctx.arc(16, 16, 14, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.needsUpdate = true;
+    return tex;
+  }, []);
+
+  // --- Geometry Definitions ---
+  const starGeometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    const points = 5;
+    const outerRadius = 1.0;
+    const innerRadius = 0.4;
+    for (let i = 0; i < points * 2; i++) {
+      const r = i % 2 === 0 ? outerRadius : innerRadius;
+      const a = (i / (points * 2)) * Math.PI * 2;
+      const x = Math.cos(a + Math.PI / 2) * r; 
+      const y = Math.sin(a + Math.PI / 2) * r;
+      if (i === 0) shape.moveTo(x, y);
+      else shape.lineTo(x, y);
+    }
+    shape.closePath();
+    
+    const extrudeSettings = { depth: 0.2, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 4 };
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.center();
+    return geo;
+  }, []);
+
+  // --- ORNAMENTS ---
   const ornaments = useMemo(() => {
     const items = [];
-    const count = 50;
-    for (let i = 0; i < count; i++) {
+    const targetCount = 120; 
+    const minDistance = 0.8; 
+    let attempts = 0;
+    const maxAttempts = 5000;
+
+    while (items.length < targetCount && attempts < maxAttempts) {
+      attempts++;
+      
       const h = Math.random() * 0.9 + 0.05;
+      if (h > 0.75 && Math.random() > 0.4) continue;
+
       const radiusAtH = (1 - h) * TREE_RADIUS;
       const angle = Math.random() * Math.PI * 2;
-      const r = radiusAtH * 0.95;
-      const isBox = Math.random() > 0.6;
-      const scale = 0.1 + Math.random() * 0.1;
+      const r = radiusAtH * 0.95; 
 
-      // Original Tree Pos
       const ox = Math.cos(angle) * r;
       const oy = h * TREE_HEIGHT - TREE_HEIGHT / 2;
       const oz = Math.sin(angle) * r;
+      const candidatePos = new THREE.Vector3(ox, oy, oz);
 
-      // Background Sphere Pos - Match Particle Sphere Radius (~20)
-      const phi = Math.random() * Math.PI;
-      const theta = Math.random() * Math.PI * 2;
-      const sr = 18 + Math.random() * 4;
+      let tooClose = false;
+      for (const existingItem of items) {
+          if (candidatePos.distanceTo(existingItem.orig) < minDistance) {
+              tooClose = true;
+              break;
+          }
+      }
+
+      if (tooClose) continue;
+
+      const typeRoll = Math.random();
+      let type: 'box' | 'sphere' | 'star';
+      
+      if (typeRoll < 0.25) {
+        if (h > 0.9) type = 'sphere'; 
+        else type = 'box';
+      }
+      else if (typeRoll < 0.5) type = 'star'; 
+      else type = 'sphere';
+
+      const scaleBase = 0.1 + Math.random() * 0.1;
+      let finalScale = scaleBase;
+      if (type === 'box') finalScale *= 1.5;
+      if (type === 'star') finalScale *= 0.6; 
+
+      // OPTIMIZED SCATTER: 
+      // 1. Uniform sphere distribution (Math.acos) to avoid clumping at poles.
+      // 2. Reduced radius (8-20) to bring them closer to camera view, increasing "overview" count.
+      const sr = 8 + Math.random() * 12; 
+      const u = Math.random();
+      const v = Math.random();
+      const theta = 2 * Math.PI * u;
+      const phi = Math.acos(2 * v - 1);
+
       const bx = sr * Math.sin(phi) * Math.cos(theta);
-      const by = sr * Math.sin(phi) * Math.sin(theta);
+      const by = sr * Math.sin(phi) * Math.sin(theta); // Y is now uniformly distributed
       const bz = sr * Math.cos(phi);
 
       items.push({
-        orig: new THREE.Vector3(ox, oy, oz),
+        orig: candidatePos,
         back: new THREE.Vector3(bx, by, bz),
         color: Math.random() > 0.5 ? COLORS.ruby : COLORS.gold,
-        isBox,
-        scale: isBox ? scale * 1.4 : scale,
+        type,
+        scale: finalScale,
       });
     }
     return items;
   }, []);
 
-  const ribbonPoints = useMemo(() => {
-    const pts = [];
-    const loops = 8;
-    const pointsPerLoop = 200;
-    for (let i = 0; i < loops * pointsPerLoop; i++) {
-      const t = i / (loops * pointsPerLoop);
-      const h = t;
-      const radiusAtH = (1 - h) * TREE_RADIUS;
-      const angle = t * Math.PI * 2 * loops;
-      const r = radiusAtH * 1.05;
-      
-      const ox = Math.cos(angle) * r;
-      const oy = h * TREE_HEIGHT - TREE_HEIGHT / 2;
-      const oz = Math.sin(angle) * r;
+  // --- FLOATING PEARLS ---
+  const pearls = useMemo(() => {
+    const items = [];
+    const count = 52; // Reduced by 30% from 75
+    
+    for (let i = 0; i < count; i++) {
+        let h = Math.random(); 
 
-      // Scatter ribbon points
-      const phi = Math.random() * Math.PI;
-      const theta = Math.random() * Math.PI * 2;
-      const sr = 19;
-      const bx = sr * Math.sin(phi) * Math.cos(theta);
-      const by = sr * Math.sin(phi) * Math.sin(theta);
-      const bz = sr * Math.cos(phi);
+        // Reduce density in the top 15% (h > 0.85)
+        // If random height falls in top 15%, 70% chance to move it to lower 85%
+        if (h > 0.85 && Math.random() > 0.3) {
+            h = Math.random() * 0.85;
+        }
 
-      pts.push({ orig: new THREE.Vector3(ox, oy, oz), back: new THREE.Vector3(bx, by, bz) });
+        const radiusAtH = (1 - h) * TREE_RADIUS;
+        
+        // Floating slightly outside the tree surface
+        const offset = 0.2 + Math.random() * 0.5; 
+        const r = radiusAtH + offset;
+        
+        const angle = Math.random() * Math.PI * 2;
+        const x = Math.cos(angle) * r;
+        const y = h * TREE_HEIGHT - TREE_HEIGHT / 2;
+        const z = Math.sin(angle) * r;
+        
+        const orig = new THREE.Vector3(x, y, z);
+        
+        // Scatter positions for exploded view
+        const sr = 10 + Math.random() * 12; 
+        const u = Math.random();
+        const v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        const sx = sr * Math.sin(phi) * Math.cos(theta);
+        const sy = sr * Math.sin(phi) * Math.sin(theta);
+        const sz = sr * Math.cos(phi);
+        const back = new THREE.Vector3(sx, sy, sz);
+
+        items.push({
+            orig,
+            back,
+            scale: 0.06 + Math.random() * 0.04, // Size reduced by half (0.06 - 0.10)
+            phase: Math.random() * Math.PI * 2, // For bobbing animation
+        });
     }
-    return pts;
+    return items;
   }, []);
 
-  const ribbonPosArray = useMemo(() => new Float32Array(ribbonPoints.length * 3), [ribbonPoints]);
+  // --- RIBBON PARTICLES ---
+  const [ribbonPositions, ribbonScatterPositions, ribbonColors] = useMemo(() => {
+    const pointsCount = 6000; 
+    const loops = 6.5;
+    
+    const curvePoints = [];
+    const colorValues = [];
+    const color1 = new THREE.Color(COLORS.gold);
+    const color2 = new THREE.Color(COLORS.goldAmber);
+    
+    for (let i = 0; i < pointsCount; i++) {
+      const t = i / pointsCount;
+      const h = THREE.MathUtils.lerp(-TREE_HEIGHT/2 + 0.5, TREE_HEIGHT/2 - 1.0, t);
+      const normalizedH = (h + TREE_HEIGHT/2) / TREE_HEIGHT;
+      const radiusAtH = (1 - normalizedH) * TREE_RADIUS;
+      
+      const r = radiusAtH + 0.15; 
+      
+      const angle = t * Math.PI * 2 * loops;
+      
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      curvePoints.push(x, h, z);
+
+      // Colors
+      const mix = Math.random();
+      const c = mix > 0.5 ? color1 : color2;
+      colorValues.push(c.r, c.g, c.b, 1.0);
+    }
+
+    const scatterPoints = [];
+    for (let i = 0; i < pointsCount; i++) {
+        // Uniform Scatter for ribbons too, slightly wider than ornaments
+        const sr = 10 + Math.random() * 15; 
+        const u = Math.random();
+        const v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        
+        const x = sr * Math.sin(phi) * Math.cos(theta);
+        const y = sr * Math.sin(phi) * Math.sin(theta);
+        const z = sr * Math.cos(phi);
+        scatterPoints.push(x, y, z);
+    }
+
+    return [new Float32Array(curvePoints), new Float32Array(scatterPoints), new Float32Array(colorValues)];
+  }, []);
+
+  // --- MAIN STAR ---
+  const { starOriginalPos, starTargetPos } = useMemo(() => {
+    const orig = new THREE.Vector3(0, TREE_HEIGHT / 2 + 0.55, 0);
+    const r = 18 + Math.random() * 5;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI;
+    const target = new THREE.Vector3(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.sin(phi) * Math.sin(theta),
+        r * Math.cos(phi)
+    );
+    return { starOriginalPos: orig, starTargetPos: target };
+  }, []);
 
   useFrame((state, delta) => {
+    const rotationSpeed = THREE.MathUtils.lerp(0.1, 0.02, wishProgress);
+    const checkOcclusion = wishProgress > 0.7;
+    const camPos = state.camera.position;
+    state.camera.getWorldDirection(scratchCamDir);
+
+    // 1. Ornaments Update
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * (0.1 + wishProgress * 0.15);
-      
+      groupRef.current.rotation.y += delta * rotationSpeed;
+      groupRef.current.updateMatrixWorld();
+
       groupRef.current.children.forEach((child, i) => {
         const data = ornaments[i];
         if (data) {
           child.position.lerpVectors(data.orig, data.back, wishProgress);
-          child.scale.setScalar(data.scale * (1 - wishProgress * 0.5));
+          
+          const isExtra = i % 2 !== 0; 
+          let currentScale = data.scale;
+
+          if (isExtra) {
+              currentScale = data.scale * THREE.MathUtils.smoothstep(wishProgress, 0, 0.8);
+          }
+          
+          child.scale.setScalar(currentScale); 
+          
+          if (data.type === 'box') {
+             child.rotation.x = Math.sin(state.clock.elapsedTime + i) * 0.2;
+             child.rotation.z = Math.cos(state.clock.elapsedTime + i) * 0.2;
+          } else if (data.type === 'star') {
+             child.rotation.z += delta * 0.5;
+             child.rotation.y += delta * 0.5;
+          }
+
+          // --- OCCLUSION LOGIC ---
+          if (checkOcclusion) {
+              scratchVec.copy(child.position).applyMatrix4(groupRef.current!.matrixWorld);
+              const dx = scratchVec.x - camPos.x;
+              const dy = scratchVec.y - camPos.y;
+              const dz = scratchVec.z - camPos.z;
+              const distAlong = dx*scratchCamDir.x + dy*scratchCamDir.y + dz*scratchCamDir.z;
+              
+              let targetOpacity = 1.0;
+              if (distAlong > 1.0 && distAlong < 14.0) {
+                 const distSq = (dx*dx + dy*dy + dz*dz) - (distAlong*distAlong);
+                 if (distSq < 3.0) targetOpacity = 0.0;
+              }
+
+              child.traverse((obj) => {
+                  if (obj instanceof THREE.Mesh && obj.material) {
+                      const mat = obj.material as THREE.MeshStandardMaterial;
+                      mat.opacity = THREE.MathUtils.lerp(mat.opacity, targetOpacity, 0.1);
+                  }
+              });
+          }
         }
       });
     }
-    if (ribbonRef.current) {
-      ribbonRef.current.rotation.y += delta * 0.2;
-      const posAttr = ribbonRef.current.geometry.attributes.position;
-      ribbonPoints.forEach((pt, i) => {
-        const currentPos = new THREE.Vector3().lerpVectors(pt.orig, pt.back, wishProgress);
-        posAttr.array[i * 3] = currentPos.x;
-        posAttr.array[i * 3 + 1] = currentPos.y;
-        posAttr.array[i * 3 + 2] = currentPos.z;
-      });
-      posAttr.needsUpdate = true;
 
-      if (ribbonMatRef.current) {
-          ribbonMatRef.current.opacity = THREE.MathUtils.lerp(0.6, 0.2, wishProgress);
-      }
+    // 2. Pearls Update
+    if (pearlsGroupRef.current) {
+        pearlsGroupRef.current.rotation.y += delta * rotationSpeed;
+        pearlsGroupRef.current.updateMatrixWorld();
+
+        pearlsGroupRef.current.children.forEach((child, i) => {
+            const data = pearls[i];
+            if (data) {
+                // Base position interpolation
+                scratchVec.lerpVectors(data.orig, data.back, wishProgress);
+                
+                // Add floating bobbing animation
+                const bobY = Math.sin(state.clock.elapsedTime * 2.0 + data.phase) * 0.08;
+                child.position.set(scratchVec.x, scratchVec.y + bobY, scratchVec.z);
+                
+                child.scale.setScalar(data.scale);
+
+                // Occlusion Logic (Same as ornaments)
+                if (checkOcclusion) {
+                    // Calculate world position for camera check
+                    // Clone because applying matrix transforms the vector itself
+                    const worldPos = child.position.clone();
+                    worldPos.applyMatrix4(pearlsGroupRef.current!.matrixWorld);
+
+                    const dx = worldPos.x - camPos.x;
+                    const dy = worldPos.y - camPos.y;
+                    const dz = worldPos.z - camPos.z;
+                    const distAlong = dx*scratchCamDir.x + dy*scratchCamDir.y + dz*scratchCamDir.z;
+                    
+                    let targetOpacity = 1.0;
+                    if (distAlong > 1.0 && distAlong < 14.0) {
+                        const distSq = (dx*dx + dy*dy + dz*dz) - (distAlong*distAlong);
+                        if (distSq < 3.0) targetOpacity = 0.0;
+                    }
+
+                    const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial;
+                    if (mat) {
+                        mat.opacity = THREE.MathUtils.lerp(mat.opacity, targetOpacity, 0.1);
+                    }
+                }
+            }
+        });
+    }
+    
+    // 3. Ribbon Particles Update
+    if (ribbonPointsRef.current) {
+        ribbonPointsRef.current.rotation.y += delta * rotationSpeed;
+        
+        ribbonPointsRef.current.updateMatrixWorld();
+        const matrixWorld = ribbonPointsRef.current.matrixWorld;
+
+        const positions = ribbonPointsRef.current.geometry.attributes.position;
+        const colors = ribbonPointsRef.current.geometry.attributes.color; 
+        const lerpFactor = 0.1;
+        
+        for (let i = 0; i < positions.count; i++) {
+            const i3 = i * 3;
+            const i4 = i * 4;
+
+            // Update Position
+            const targetX = ribbonPositions[i3] * (1 - wishProgress) + ribbonScatterPositions[i3] * wishProgress;
+            const targetY = ribbonPositions[i3+1] * (1 - wishProgress) + ribbonScatterPositions[i3+1] * wishProgress;
+            const targetZ = ribbonPositions[i3+2] * (1 - wishProgress) + ribbonScatterPositions[i3+2] * wishProgress;
+            
+            positions.array[i3] += (targetX - positions.array[i3]) * lerpFactor;
+            positions.array[i3+1] += (targetY - positions.array[i3+1]) * lerpFactor;
+            positions.array[i3+2] += (targetZ - positions.array[i3+2]) * lerpFactor;
+
+            // Occlusion Logic
+            let alpha = 1.0;
+            if (checkOcclusion && colors) {
+               scratchVec.set(positions.array[i3], positions.array[i3+1], positions.array[i3+2]);
+               scratchVec.applyMatrix4(matrixWorld);
+
+               const dx = scratchVec.x - camPos.x;
+               const dy = scratchVec.y - camPos.y;
+               const dz = scratchVec.z - camPos.z;
+               const distAlong = dx*scratchCamDir.x + dy*scratchCamDir.y + dz*scratchCamDir.z;
+
+               if (distAlong > 1.0 && distAlong < 14.0) {
+                   const distSq = (dx*dx + dy*dy + dz*dz) - (distAlong*distAlong);
+                   if (distSq < 3.0) alpha = 0.0;
+               }
+               colors.array[i4+3] = THREE.MathUtils.lerp(colors.array[i4+3], alpha, 0.1);
+            }
+         }
+         positions.needsUpdate = true;
+         if (colors) colors.needsUpdate = true;
+    }
+
+    // 4. Main Star Update
+    if (starRef.current) {
+        starRef.current.rotation.y += delta * rotationSpeed;
+        starRef.current.position.lerpVectors(starOriginalPos, starTargetPos, wishProgress);
+        
+        // HIDE STAR when exploded: Scale to 0
+        const starVisibleScale = THREE.MathUtils.lerp(0.6, 0.0, wishProgress);
+        starRef.current.scale.setScalar(starVisibleScale);
+        
+        starRef.current.rotation.z = Math.sin(state.clock.elapsedTime) * 0.1 * wishProgress;
+        const mat = starRef.current.material as THREE.MeshStandardMaterial;
+        if (mat) {
+             const t = state.clock.elapsedTime;
+             // Also fade opacity to be sure
+             mat.opacity = THREE.MathUtils.lerp(1.0, 0.0, wishProgress);
+             mat.emissiveIntensity = 0.5 + Math.sin(t * 1.5) * 0.2; 
+        }
     }
   });
 
@@ -112,76 +415,103 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
       <group ref={groupRef}>
         {ornaments.map((orn, i) => (
           <group key={i}>
-            {orn.isBox ? (
-              <>
+            {orn.type === 'box' ? (
+              <group>
                 <mesh>
                   <boxGeometry args={[1, 1, 1]} />
-                  <meshStandardMaterial 
-                    color={COLORS.ruby} 
-                    metalness={0.7} 
-                    roughness={0.2} 
-                    emissive={COLORS.ruby} 
-                    emissiveIntensity={0.2} 
+                  <meshStandardMaterial color={COLORS.ruby} metalness={0.6} roughness={0.2} transparent opacity={1} />
+                </mesh>
+                <mesh>
+                  <boxGeometry args={[0.25, 1.01, 1.01]} />
+                  <meshStandardMaterial color={COLORS.gold} metalness={1.0} roughness={0.1} transparent opacity={1} />
+                </mesh>
+                <mesh>
+                  <boxGeometry args={[1.01, 1.01, 0.25]} />
+                  <meshStandardMaterial color={COLORS.gold} metalness={1.0} roughness={0.1} transparent opacity={1} />
+                </mesh>
+              </group>
+            ) : orn.type === 'star' ? (
+              <mesh geometry={starGeometry}>
+                <meshStandardMaterial 
+                    color="#FFD700"
+                    emissive="#FFA500"
+                    emissiveIntensity={0.6}
+                    metalness={1.0}
+                    roughness={0.1}
                     transparent
-                    opacity={THREE.MathUtils.lerp(1, 0.3, wishProgress)}
-                  />
-                </mesh>
-                <mesh scale={[1.1, 0.2, 1.1]}>
-                  <boxGeometry args={[1, 1, 1]} />
-                  <meshStandardMaterial color={COLORS.gold} metalness={1} roughness={0.1} transparent opacity={THREE.MathUtils.lerp(1, 0.3, wishProgress)} />
-                </mesh>
-              </>
+                    opacity={1}
+                />
+              </mesh>
             ) : (
               <mesh>
-                <sphereGeometry args={[1, 16, 16]} />
-                <meshStandardMaterial 
-                    color={orn.color} 
-                    metalness={0.9} 
-                    roughness={0.1} 
-                    emissive={orn.color} 
-                    emissiveIntensity={0.3} 
-                    transparent
-                    opacity={THREE.MathUtils.lerp(1, 0.3, wishProgress)}
-                />
+                <sphereGeometry args={[1, 32, 32]} />
+                <meshStandardMaterial color={orn.color} metalness={0.9} roughness={0.1} envMapIntensity={1.5} transparent opacity={1} />
               </mesh>
             )}
           </group>
         ))}
       </group>
 
-      <points ref={ribbonRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={ribbonPoints.length}
-            array={ribbonPosArray}
-            itemSize={3}
+      <group ref={pearlsGroupRef}>
+          {pearls.map((pearl, i) => (
+              <mesh key={i}>
+                  <sphereGeometry args={[1, 32, 32]} />
+                  <meshStandardMaterial 
+                      color="#FFFFFF" 
+                      emissive="#FFFFFF" 
+                      emissiveIntensity={0.6} 
+                      roughness={0.35} 
+                      metalness={0.2} 
+                      transparent
+                      opacity={1}
+                  />
+              </mesh>
+          ))}
+      </group>
+
+      <points ref={ribbonPointsRef}>
+          <bufferGeometry>
+              <bufferAttribute 
+                 attach="attributes-position"
+                 count={ribbonPositions.length / 3}
+                 array={ribbonPositions.slice()}
+                 itemSize={3}
+              />
+              <bufferAttribute 
+                 attach="attributes-color"
+                 count={ribbonColors.length / 4}
+                 array={ribbonColors}
+                 itemSize={4}
+              />
+          </bufferGeometry>
+          <pointsMaterial 
+              map={particleTexture || undefined}
+              size={0.08}
+              transparent
+              vertexColors
+              opacity={1}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              alphaTest={0.01}
           />
-        </bufferGeometry>
-        <pointsMaterial
-          ref={ribbonMatRef}
-          size={0.05}
-          color={COLORS.goldAmber}
-          transparent
-          opacity={0.6}
-          blending={THREE.AdditiveBlending}
-        />
       </points>
 
-      {/* Star Top logic */}
       <mesh 
-        position={[0, TREE_HEIGHT / 2 + 0.5, 0]} 
-        scale={0.8 * (1 - wishProgress)}
+        ref={starRef}
+        position={starOriginalPos} 
+        scale={0.6}
+        geometry={starGeometry}
+        rotation={[0, 0, 0]}
       >
-        <octahedronGeometry args={[1, 0]} />
         <meshStandardMaterial 
-            color={COLORS.gold} 
-            emissive={COLORS.gold} 
-            emissiveIntensity={2} 
-            metalness={1} 
-            roughness={0} 
+            color="#FFD700"
+            emissive="#FFA500"
+            emissiveIntensity={0.6}
+            metalness={1.0}
+            roughness={0.1}
+            envMapIntensity={2.5}
             transparent
-            opacity={1 - wishProgress}
+            opacity={1}
         />
       </mesh>
     </>
