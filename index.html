@@ -22,7 +22,7 @@
             height: 100vh;
         }
 
-        /* Essential Utility Classes (Replacing Tailwind) */
+        /* Essential Utility Classes (Zero External Dependency) */
         .relative { position: relative; }
         .absolute { position: absolute; }
         .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
@@ -147,19 +147,19 @@
 <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "three": "https://esm.sh/three@0.171.0",
-    "@react-three/fiber": "https://esm.sh/@react-three/fiber@9.0.0?external=react,react-dom,three",
-    "@react-three/drei": "https://esm.sh/@react-three/drei@10.0.0?external=react,react-dom,three,@react-three/fiber",
+    "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
+    "three": "https://esm.sh/three@^0.182.0"
   }
 }
 </script>
 </head>
 <body>
     <div id="root"></div>
+    <!-- 显式入口文件引用：这行是激活整个 App 的核心 -->
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>
