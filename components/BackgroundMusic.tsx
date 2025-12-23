@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 // Updated Resource Link with Commit Hash (93969c5) to bypass CDN cache
-const BGM_URL = "/bgm.mp3";
+const BGM_URL = "https://cdn.jsdelivr.net/gh/lemonh2077/LocalMChristmasTree2@93969c5/bgm.mp3";
 
 const BackgroundMusic: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);

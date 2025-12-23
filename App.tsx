@@ -1,39 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Scene from './components/Scene';
 import BackgroundMusic from './components/BackgroundMusic';
+import SnowOverlay from './components/SnowOverlay';
 import { USER_PHOTOS } from './constants';
-
-const SnowOverlay: React.FC = () => {
-  const snowflakes = useMemo(() => {
-    return Array.from({ length: 15 }).map((_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      // Use negative delay to distribute snowflakes immediately on mount
-      delay: `${-Math.random() * 10}s`,
-      size: `${Math.random() * 0.5 + 0.5}rem`,
-      duration: `${Math.random() * 4 + 8}s`,
-    }));
-  }, []);
-
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
-      {snowflakes.map((snow) => (
-        <div
-          key={snow.id}
-          className="absolute text-white/40 animate-snow"
-          style={{
-            left: snow.left,
-            animationDelay: snow.delay,
-            fontSize: snow.size,
-            animationDuration: snow.duration,
-          }}
-        >
-          ❄
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const App: React.FC = () => {
   const [isExploded, setIsExploded] = useState(false);
@@ -105,6 +74,8 @@ const App: React.FC = () => {
       onTouchEnd={handleTouchEnd}
     >
       <BackgroundMusic />
+      
+      {/* Front-layer Snowfall Component */}
       {wishProgress < 0.5 && <SnowOverlay />}
 
       <div className="absolute inset-0 z-0">
@@ -112,7 +83,7 @@ const App: React.FC = () => {
       </div>
 
       <div className="absolute inset-0 pointer-events-none transition-all duration-1000 bg-transparent">
-        {/* Header - Repositioned and snowflakes added after A WINTER MEMORIES */}
+        {/* Header */}
         <div className={`absolute top-1 left-0 right-0 text-center px-6 transition-transform duration-700 ${wishProgress > 0.5 ? '-translate-y-20 opacity-0' : 'translate-y-0 opacity-100'}`}>
           <h1 className="text-[#D4AF37] text-3xl font-bold tracking-widest drop-shadow-lg mb-2">
             Merry Christmas

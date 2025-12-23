@@ -1,7 +1,7 @@
-/// <reference types="@react-three/fiber" />
+
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame, useThree, ThreeElements } from '@react-three/fiber';
 import { COLORS, TREE_HEIGHT, TREE_RADIUS } from '../constants';
 
 interface DecorationsProps {

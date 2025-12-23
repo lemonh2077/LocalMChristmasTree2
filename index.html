@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <link rel="preload" href="/bgm.mp3" as="audio">
-    <link rel="preload" href="/env.hdr" as="fetch" crossorigin="anonymous">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="referrer" content="no-referrer">
@@ -153,15 +151,14 @@
             0%, 100% { opacity: 0.2; }
             50% { opacity: 0.5; }
         }
-        .animate-pulse { animation: pulse 2 cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
-        @keyframes snowDrift {
-            0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0; }
+        @keyframes snowfall {
+            0% { transform: translateY(-10vh) translateX(0); opacity: 0; }
             10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(110vh) translateX(30px) rotate(360deg); opacity: 0; }
+            100% { transform: translateY(110vh) translateX(20px); opacity: 0; }
         }
-        .animate-snow { animation: snowDrift 10 linear infinite; }
+        .animate-snowfall { animation: snowfall linear infinite; }
 
         .drop-shadow-lg { filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.04)) drop-shadow(0 4px 3px rgba(0, 0, 0, 0.1)); }
         .drop-shadow-md { filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.07)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.06)); }

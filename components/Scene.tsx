@@ -1,6 +1,6 @@
-/// <reference types="@react-three/fiber" />
+
 import React, { Suspense, ReactNode, Component } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, ThreeElements } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls, Html, Environment } from '@react-three/drei';
 import TreeParticles from './TreeParticles';
 import Decorations from './Decorations';
@@ -21,11 +21,9 @@ interface GalleryErrorBoundaryState {
   hasError: boolean;
 }
 
-// Fix: Use Component from 'react' explicitly to ensure TypeScript recognizes the state and props properties.
 class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryErrorBoundaryState> {
   constructor(props: GalleryErrorBoundaryProps) {
     super(props);
-    // Fix: state property is now recognized through proper Component inheritance.
     this.state = { hasError: false };
   }
 
@@ -38,7 +36,6 @@ class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryE
   }
 
   render() {
-    // Fix: state property is now recognized through proper Component inheritance.
     if (this.state.hasError) {
       return (
         <Html center position={[0, 0, 0]} zIndexRange={[100, 0]}>
@@ -53,7 +50,6 @@ class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryE
         </Html>
       );
     }
-    // Fix: props property is now recognized through proper Component inheritance.
     return this.props.children;
   }
 }
@@ -63,7 +59,7 @@ const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
     <Canvas dpr={[1, 2]} shadows gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
       <color attach="background" args={[COLORS.background]} />
       
-      <Environment files="/env.hdr" />
+      <Environment preset="city" />
 
       <PerspectiveCamera makeDefault position={[0, 5, 17]} fov={45} />
       

@@ -1,7 +1,7 @@
-/// <reference types="@react-three/fiber" />
+
 import React, { useMemo, useRef, useLayoutEffect } from 'react';
 import * as THREE from 'three';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame, useThree, ThreeElements } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import { USER_PHOTOS, TREE_HEIGHT, TREE_RADIUS } from '../constants';
 

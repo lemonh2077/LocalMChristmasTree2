@@ -1,7 +1,7 @@
-/// <reference types="@react-three/fiber" />
+
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, ThreeElements } from '@react-three/fiber';
 import { PARTICLE_COUNT, TREE_HEIGHT, TREE_RADIUS, COLORS } from '../constants';
 
 interface TreeParticlesProps {
