@@ -1,3 +1,4 @@
+/// <reference types="@react-three/fiber" />
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -71,7 +72,8 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
     while (items.length < targetCount && attempts < maxAttempts) {
       attempts++;
       
-      const h = Math.random() * 0.9 + 0.05;
+      // h is normalized height [0, 1]. 0.9 means top 10% is empty.
+      const h = Math.random() * 0.85 + 0.05; 
       if (h > 0.75 && Math.random() > 0.4) continue;
 
       const radiusAtH = (1 - h) * TREE_RADIUS;
@@ -97,7 +99,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
       let type: 'box' | 'sphere' | 'star';
       
       if (typeRoll < 0.25) {
-        if (h > 0.9) type = 'sphere'; 
+        if (h > 0.8) type = 'sphere'; 
         else type = 'box';
       }
       else if (typeRoll < 0.5) type = 'star'; 
@@ -108,9 +110,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
       if (type === 'box') finalScale *= 1.5;
       if (type === 'star') finalScale *= 0.6; 
 
-      // OPTIMIZED SCATTER: 
-      // 1. Uniform sphere distribution (Math.acos) to avoid clumping at poles.
-      // 2. Reduced radius (8-20) to bring them closer to camera view, increasing "overview" count.
       const sr = 8 + Math.random() * 12; 
       const u = Math.random();
       const v = Math.random();
@@ -118,7 +117,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
       const phi = Math.acos(2 * v - 1);
 
       const bx = sr * Math.sin(phi) * Math.cos(theta);
-      const by = sr * Math.sin(phi) * Math.sin(theta); // Y is now uniformly distributed
+      const by = sr * Math.sin(phi) * Math.sin(theta); 
       const bz = sr * Math.cos(phi);
 
       items.push({
@@ -135,20 +134,17 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
   // --- FLOATING PEARLS ---
   const pearls = useMemo(() => {
     const items = [];
-    const count = 52; // Reduced by 30% from 75
+    const count = 52; 
     
     for (let i = 0; i < count; i++) {
-        let h = Math.random(); 
+        // Limit h to 0.9 to avoid top area
+        let h = Math.random() * 0.9; 
 
-        // Reduce density in the top 15% (h > 0.85)
-        // If random height falls in top 15%, 70% chance to move it to lower 85%
-        if (h > 0.85 && Math.random() > 0.3) {
-            h = Math.random() * 0.85;
+        if (h > 0.75 && Math.random() > 0.3) {
+            h = Math.random() * 0.75;
         }
 
         const radiusAtH = (1 - h) * TREE_RADIUS;
-        
-        // Floating slightly outside the tree surface
         const offset = 0.2 + Math.random() * 0.5; 
         const r = radiusAtH + offset;
         
@@ -159,7 +155,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
         
         const orig = new THREE.Vector3(x, y, z);
         
-        // Scatter positions for exploded view
         const sr = 10 + Math.random() * 12; 
         const u = Math.random();
         const v = Math.random();
@@ -173,8 +168,8 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
         items.push({
             orig,
             back,
-            scale: 0.06 + Math.random() * 0.04, // Size reduced by half (0.06 - 0.10)
-            phase: Math.random() * Math.PI * 2, // For bobbing animation
+            scale: 0.06 + Math.random() * 0.04, 
+            phase: Math.random() * Math.PI * 2, 
         });
     }
     return items;
@@ -192,6 +187,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
     
     for (let i = 0; i < pointsCount; i++) {
       const t = i / pointsCount;
+      // Top height is TREE_HEIGHT/2 - 1.0 = 4.0. Tree top is 5.0. This is 1.0 units (10%) clear.
       const h = THREE.MathUtils.lerp(-TREE_HEIGHT/2 + 0.5, TREE_HEIGHT/2 - 1.0, t);
       const normalizedH = (h + TREE_HEIGHT/2) / TREE_HEIGHT;
       const radiusAtH = (1 - normalizedH) * TREE_RADIUS;
@@ -212,7 +208,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
 
     const scatterPoints = [];
     for (let i = 0; i < pointsCount; i++) {
-        // Uniform Scatter for ribbons too, slightly wider than ornaments
         const sr = 10 + Math.random() * 15; 
         const u = Math.random();
         const v = Math.random();
@@ -225,6 +220,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
         scatterPoints.push(x, y, z);
     }
 
+    // Fixed: scatterPositions renamed to scatterPoints as defined in the block above
     return [new Float32Array(curvePoints), new Float32Array(scatterPoints), new Float32Array(colorValues)];
   }, []);
 
@@ -275,7 +271,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
              child.rotation.y += delta * 0.5;
           }
 
-          // --- OCCLUSION LOGIC ---
           if (checkOcclusion) {
               scratchVec.copy(child.position).applyMatrix4(groupRef.current!.matrixWorld);
               const dx = scratchVec.x - camPos.x;
@@ -308,19 +303,12 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
         pearlsGroupRef.current.children.forEach((child, i) => {
             const data = pearls[i];
             if (data) {
-                // Base position interpolation
                 scratchVec.lerpVectors(data.orig, data.back, wishProgress);
-                
-                // Add floating bobbing animation
                 const bobY = Math.sin(state.clock.elapsedTime * 2.0 + data.phase) * 0.08;
                 child.position.set(scratchVec.x, scratchVec.y + bobY, scratchVec.z);
-                
                 child.scale.setScalar(data.scale);
 
-                // Occlusion Logic (Same as ornaments)
                 if (checkOcclusion) {
-                    // Calculate world position for camera check
-                    // Clone because applying matrix transforms the vector itself
                     const worldPos = child.position.clone();
                     worldPos.applyMatrix4(pearlsGroupRef.current!.matrixWorld);
 
@@ -347,7 +335,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
     // 3. Ribbon Particles Update
     if (ribbonPointsRef.current) {
         ribbonPointsRef.current.rotation.y += delta * rotationSpeed;
-        
         ribbonPointsRef.current.updateMatrixWorld();
         const matrixWorld = ribbonPointsRef.current.matrixWorld;
 
@@ -359,7 +346,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
             const i3 = i * 3;
             const i4 = i * 4;
 
-            // Update Position
             const targetX = ribbonPositions[i3] * (1 - wishProgress) + ribbonScatterPositions[i3] * wishProgress;
             const targetY = ribbonPositions[i3+1] * (1 - wishProgress) + ribbonScatterPositions[i3+1] * wishProgress;
             const targetZ = ribbonPositions[i3+2] * (1 - wishProgress) + ribbonScatterPositions[i3+2] * wishProgress;
@@ -368,7 +354,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
             positions.array[i3+1] += (targetY - positions.array[i3+1]) * lerpFactor;
             positions.array[i3+2] += (targetZ - positions.array[i3+2]) * lerpFactor;
 
-            // Occlusion Logic
             let alpha = 1.0;
             if (checkOcclusion && colors) {
                scratchVec.set(positions.array[i3], positions.array[i3+1], positions.array[i3+2]);
@@ -394,16 +379,12 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
     if (starRef.current) {
         starRef.current.rotation.y += delta * rotationSpeed;
         starRef.current.position.lerpVectors(starOriginalPos, starTargetPos, wishProgress);
-        
-        // HIDE STAR when exploded: Scale to 0
         const starVisibleScale = THREE.MathUtils.lerp(0.6, 0.0, wishProgress);
         starRef.current.scale.setScalar(starVisibleScale);
-        
         starRef.current.rotation.z = Math.sin(state.clock.elapsedTime) * 0.1 * wishProgress;
         const mat = starRef.current.material as THREE.MeshStandardMaterial;
         if (mat) {
              const t = state.clock.elapsedTime;
-             // Also fade opacity to be sure
              mat.opacity = THREE.MathUtils.lerp(1.0, 0.0, wishProgress);
              mat.emissiveIntensity = 0.5 + Math.sin(t * 1.5) * 0.2; 
         }
@@ -459,7 +440,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
                   <meshStandardMaterial 
                       color="#FFFFFF" 
                       emissive="#FFFFFF" 
-                      emissiveIntensity={0.6} 
+                      emissiveIntensity={4.0} 
                       roughness={0.35} 
                       metalness={0.2} 
                       transparent

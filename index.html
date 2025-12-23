@@ -1,10 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<!-- 强制预加载 HDR 环境贴图 -->
-<link rel="preload" href="/env.hdr" as="fetch" crossorigin="anonymous">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="referrer" content="no-referrer">
@@ -29,6 +25,10 @@
         .relative { position: relative; }
         .absolute { position: absolute; }
         .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+        .inset-1 { top: 0.25rem; right: 0.25rem; bottom: 0.25rem; left: 0.25rem; }
+        .top-1 { top: 0.25rem; }
+        .top-2 { top: 0.5rem; }
+        .top-4 { top: 1rem; }
         .top-8 { top: 2rem; }
         .top-12 { top: 3rem; }
         .top-16 { top: 4rem; }
@@ -52,12 +52,15 @@
         .w-2 { width: 0.5rem; }
         .w-6 { width: 1.5rem; }
         .w-12 { width: 3rem; }
+        .w-20 { width: 5rem; }
         .w-24 { width: 6rem; }
         .h-1 { height: 0.25rem; }
         .h-12 { height: 3rem; }
+        .h-20 { height: 5rem; }
         .h-24 { height: 6rem; }
 
         .p-3 { padding: 0.75rem; }
+        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
         .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
         .px-8 { padding-left: 2rem; padding-right: 2rem; }
         .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
@@ -65,6 +68,7 @@
         .mb-2 { margin-bottom: 0.5rem; }
 
         .text-center { text-align: center; }
+        .text-base { font-size: 1rem; }
         .text-xl { font-size: 1.25rem; }
         .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
         .text-sm { font-size: 0.875rem; }
@@ -72,6 +76,7 @@
         .text-\[10px\] { font-size: 10px; }
         
         .font-light { font-weight: 300; }
+        .font-normal { font-weight: 400; }
         .font-bold { font-weight: 700; }
         .font-black { font-weight: 900; }
         
@@ -79,8 +84,10 @@
         .tracking-tighter { letter-spacing: -0.05em; }
         .tracking-\[0\.2em\] { letter-spacing: 0.2em; }
         .tracking-\[0\.3em\] { letter-spacing: 0.3em; }
+        .tracking-\[0\.4em\] { letter-spacing: 0.4em; }
         .uppercase { text-transform: uppercase; }
 
+        .text-black { color: #000000; }
         .text-\[\#D4AF37\] { color: #D4AF37; }
         .text-\[\#FDF5E6\] { color: #FDF5E6; }
         .text-\[\#FDF5E6\]\/60 { color: rgba(253, 245, 230, 0.6); }
@@ -91,7 +98,9 @@
         .bg-transparent { background-color: transparent; }
         .bg-\[\#050505\] { background-color: #050505; }
         .bg-black\/40 { background-color: rgba(0, 0, 0, 0.4); }
+        .bg-black\/60 { background-color: rgba(0, 0, 0, 0.6); }
         .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1); }
+        .bg-\[\#D4AF37\]\/40 { background-color: rgba(212, 175, 55, 0.4); }
         .bg-\[\#B22222\]\/10 { background-color: rgba(178, 34, 34, 0.1); }
         .bg-\[\#B22222\]\/20:hover { background-color: rgba(178, 34, 34, 0.2); }
         .bg-white\/20:hover { background-color: rgba(255, 255, 255, 0.2); }
@@ -103,13 +112,18 @@
         .border-\[\#D4AF37\]\/30 { border-color: rgba(212, 175, 55, 0.3); }
         .border-white\/20 { border-color: rgba(255, 255, 255, 0.2); }
         .border-\[\#D4AF37\] { border-color: #D4AF37; }
+        .border-\[\#D4AF37\]\/60 { border-color: rgba(212, 175, 55, 0.6); }
+        .border-\[\#D4AF37\]\/80 { border-color: rgba(212, 175, 55, 0.8); }
         .border-\[\#B22222\]\/50 { border-color: rgba(178, 34, 34, 0.5); }
         
         .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
         .shadow-\[inset_0_0_150px_rgba\(0\,0\,0\,0\.5\)\] { box-shadow: inset 0 0 150px rgba(0,0,0,0.5); }
-        .shadow-\[0_0_20px_rgba\(178\,34\,34\,0\.4\)\] { box-shadow: 0 0 20px rgba(178,34,34,0.4); }
+        .shadow-\[0_0_20px_rgba\(178\,34\,34\,0\.4\)\] { box-shadow: 0 0 20px rgba(178, 34, 34, 0.4); }
+        .shadow-\[0_0_20px_rgba\(212\,175\,55\,0\.3\)\] { box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
 
         .opacity-0 { opacity: 0; }
+        .opacity-30 { opacity: 0.3; }
+        .opacity-40 { opacity: 0.4; }
         .opacity-100 { opacity: 1; }
         .opacity-80 { opacity: 0.8; }
         .opacity-20 { opacity: 0.2; }
@@ -137,7 +151,15 @@
             0%, 100% { opacity: 0.2; }
             50% { opacity: 0.5; }
         }
-        .animate-pulse { animation: pulse 2 cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        @keyframes snowDrift {
+            0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh) translateX(30px) rotate(360deg); opacity: 0; }
+        }
+        .animate-snow { animation: snowDrift 10s linear infinite; }
 
         .drop-shadow-lg { filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.04)) drop-shadow(0 4px 3px rgba(0, 0, 0, 0.1)); }
         .drop-shadow-md { filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.07)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.06)); }
@@ -147,6 +169,19 @@
         .z-10 { z-index: 10; }
         .z-50 { z-index: 50; }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "three": "https://esm.sh/three@^0.182.0",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <div id="root"></div>

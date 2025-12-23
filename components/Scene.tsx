@@ -1,4 +1,5 @@
-import React, { Suspense, Component, ReactNode } from 'react';
+/// <reference types="@react-three/fiber" />
+import React, { Suspense, ReactNode, Component } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls, Html, Environment } from '@react-three/drei';
 import TreeParticles from './TreeParticles';
@@ -13,16 +14,18 @@ interface SceneProps {
 }
 
 interface GalleryErrorBoundaryProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface GalleryErrorBoundaryState {
   hasError: boolean;
 }
 
+// Fix: Use Component from 'react' explicitly to ensure TypeScript recognizes the state and props properties.
 class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryErrorBoundaryState> {
   constructor(props: GalleryErrorBoundaryProps) {
     super(props);
+    // Fix: state property is now recognized through proper Component inheritance.
     this.state = { hasError: false };
   }
 
@@ -35,6 +38,7 @@ class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryE
   }
 
   render() {
+    // Fix: state property is now recognized through proper Component inheritance.
     if (this.state.hasError) {
       return (
         <Html center position={[0, 0, 0]} zIndexRange={[100, 0]}>
@@ -49,29 +53,22 @@ class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryE
         </Html>
       );
     }
+    // Fix: props property is now recognized through proper Component inheritance.
     return this.props.children;
   }
 }
 
 const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
   return (
-    <Canvas dpr={[1, 2]} shadows gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}>
+    <Canvas dpr={[1, 2]} shadows gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
       <color attach="background" args={[COLORS.background]} />
       
-      {/* 
-         【核心修改】国产化环境适配：
-         1. 移除了 preset="city" (因为它会去连接 GitHub 下载，导致国内黑屏)。
-         2. 改为 files="/env.hdr" (直接加载 public 文件夹下的本地文件)。
-         
-         务必确保你已经下载了一个 .hdr 文件，命名为 env.hdr 并放入 public 文件夹！
-         如果你暂时没有 hdr 文件，可以先把下面这行注释掉，画面会变暗，但不黑屏。
-      */}
-      <Environment files="/env.hdr" />
+      <Environment preset="city" />
 
       <PerspectiveCamera makeDefault position={[0, 5, 17]} fov={45} />
       
-      {/* 稍微增强一点环境光，防止 HDR 加载失败时全黑 */}
-      <ambientLight intensity={0.8 + wishProgress * 0.5} />
+      {/* Reduced Ambient Light intensity to prevent washing out textures */}
+      <ambientLight intensity={0.4 + wishProgress * 0.4} />
       
       <pointLight position={[10, 10, 10]} intensity={1.5} color={COLORS.gold} />
       <pointLight position={[-10, 5, -5]} intensity={1} color={COLORS.ruby} />

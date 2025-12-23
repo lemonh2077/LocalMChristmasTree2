@@ -1,24 +1,20 @@
+/// <reference types="@react-three/fiber" />
 import React, { useMemo, useRef, useLayoutEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
-import { USER_PHOTOS, TREE_HEIGHT, TREE_RADIUS, COLORS } from '../constants';
+import { USER_PHOTOS, TREE_HEIGHT, TREE_RADIUS } from '../constants';
 
 interface PhotoItemProps {
   url: string;
+  caption: string;
   index: number;
   wishProgress: number;
   heroIndex: number;
   total: number;
 }
 
-// Utility to proxy URLs through wsrv.nl for CORS support and optimization
 const getOptimizedUrl = (url: string) => {
-  // 核心修改：如果是本地路径 (以 / 开头)，直接返回，不走国外代理
-  if (url.startsWith('/')) {
-    return url;
-  }
-
   try {
     return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=1024&q=90&output=webp`;
   } catch (e) {
@@ -26,7 +22,7 @@ const getOptimizedUrl = (url: string) => {
   }
 };
 
-const PhotoItem: React.FC<PhotoItemProps> = ({ url, index, wishProgress, heroIndex, total }) => {
+const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress, heroIndex, total }) => {
   const meshRef = useRef<THREE.Group>(null);
   const cardMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const photoMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -34,10 +30,101 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, index, wishProgress, heroInd
   
   const texture = useTexture(getOptimizedUrl(url));
 
-  // Helper objects for calculation to avoid garbage collection
+  // --- Handwritten Caption Texture Generation ---
+  const captionTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // High resolution for crisp text
+    canvas.width = 1024; 
+    canvas.height = 256;
+
+    const dateMatch = caption.match(/^(\d{4}\.\d{1,2}\.\d{1,2})\s*(.*)$/);
+    const dateText = dateMatch ? dateMatch[1] : '';
+    const mainText = dateMatch ? dateMatch[2] : caption;
+
+    const drawText = (fontSize: number) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Deepest Black Ink
+      ctx.fillStyle = '#000000';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.4; 
+      ctx.globalAlpha = 1.0; 
+      
+      // 1. Letter Spacing: Increased further to 3.5px for better breathing room
+      if ('letterSpacing' in ctx) {
+        (ctx as any).letterSpacing = '3.5px'; 
+      }
+      
+      const fontStack = '"Ma Shan Zheng", "STXingkai", "Xingkai SC", "Kaiti SC", "STKaiti", "KaiTi", cursive, serif';
+      ctx.font = `${fontSize}px ${fontStack}`;
+      
+      // Reduced horizontal padding slightly to allow more space for the wider characters
+      const horizontalPadding = 70; 
+      const verticalPadding = 20;
+      const maxWidth = canvas.width - horizontalPadding * 2;
+
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      
+      const chars = mainText.split('');
+      let line = '';
+      const lines = [];
+
+      for (let n = 0; n < chars.length; n++) {
+        const testLine = line + chars[n];
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          lines.push(line);
+          line = chars[n];
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line);
+
+      // 3. Line Height: Increased for much more breathing room (1.5x)
+      const lineHeight = fontSize * 1.5;
+      lines.forEach((l, i) => {
+        const y = verticalPadding + i * lineHeight;
+        ctx.fillText(l, horizontalPadding, y);
+        ctx.strokeText(l, horizontalPadding, y); 
+      });
+
+      // Render Date (Signature Style)
+      if (dateText) {
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        if ('letterSpacing' in ctx) (ctx as any).letterSpacing = '1.5px'; 
+        // 4. Date Font Size: Increased to match the request (1.1x of main font)
+        ctx.font = `${fontSize * 1.1}px ${fontStack}`;
+        ctx.fillText(dateText, canvas.width - horizontalPadding, canvas.height - verticalPadding / 2);
+        ctx.strokeText(dateText, canvas.width - horizontalPadding, canvas.height - verticalPadding / 2);
+      }
+
+      const totalTextHeight = lines.length * lineHeight + (dateText ? fontSize : 0);
+      if (totalTextHeight > canvas.height - verticalPadding && fontSize > 24) {
+        return false;
+      }
+      return true;
+    };
+
+    let currentFontSize = 58; 
+    while (!drawText(currentFontSize) && currentFontSize > 22) {
+      currentFontSize -= 2;
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 16;
+    tex.needsUpdate = true;
+    return tex;
+  }, [caption]);
+
   const dummy = useMemo(() => {
     const obj = new THREE.Object3D();
-    obj.rotation.order = 'YXZ'; // Match mesh rotation order
+    obj.rotation.order = 'YXZ'; 
     return obj;
   }, []);
   const vec3Tree = useMemo(() => new THREE.Vector3(), []);
@@ -50,22 +137,18 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, index, wishProgress, heroInd
 
   useLayoutEffect(() => {
     if (meshRef.current) {
-      // CRITICAL: Keep rotation order YXZ to separate facing direction (Y) from tilt (X).
       meshRef.current.rotation.order = 'YXZ';
     }
-    
     texture.anisotropy = gl.capabilities.getMaxAnisotropy();
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.LinearFilter;
     texture.needsUpdate = true;
   }, [texture, gl]);
 
-  // --- Aspect Ratio & Geometry Logic ---
   const img = texture.image as HTMLImageElement;
   const aspect = img.width / img.height;
   let imgWidth = 1;
   let imgHeight = 1;
-  // Increased MAX_SIZE by 10% (1.2 -> 1.32)
   const MAX_SIZE = 1.32;
 
   if (aspect >= 1) {
@@ -78,160 +161,110 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, index, wishProgress, heroInd
 
   const borderTop = 0.1;
   const borderSide = 0.1;
-  const borderBottom = 0.35;
+  const borderBottom = 0.45; 
   const frameWidth = imgWidth + borderSide * 2;
   const frameHeight = imgHeight + borderTop + borderBottom;
   const CARD_THICKNESS = 0.02; 
   const imageYOffset = (borderBottom - borderTop) / 2;
+  const textYOffset = -frameHeight / 2 + borderBottom / 2 + 0.01;
 
-  // --- Physics & Position Logic ---
   const { originalPos, originalRot, randomSway, treeScale } = useMemo(() => {
     const spiralLoops = 1.5;
-    const progress = index / total; // 0 at bottom, 1 at top
-    
-    // Range: 0.35 to 0.90 (Above bottom 30%)
-    // Previously 0.15 to 0.80
+    const progress = index / total; 
     const h = 0.35 + progress * 0.55;
     const angle = progress * Math.PI * 2 * spiralLoops;
-    
     const radiusAtH = (1 - h) * TREE_RADIUS;
     const r = radiusAtH + 0.36;
-
     const x = Math.cos(angle) * r;
     const y = h * TREE_HEIGHT - TREE_HEIGHT / 2;
     const z = Math.sin(angle) * r;
-
-    // --- ROTATION PHYSICS ---
-    const baseTilt = THREE.MathUtils.lerp(-0.15, -0.45, progress);
-    const randomTiltX = baseTilt - Math.random() * 0.1; 
-    
-    const randomTiltZ = (Math.random() - 0.5) * 0.4; 
-
-    // --- SIZE VARIATION ---
-    const baseSizeGradient = THREE.MathUtils.lerp(1.2, 0.7, progress);
-    const randomVariance = 0.9 + Math.random() * 0.2;
-    const finalTreeScale = baseSizeGradient * 0.7 * randomVariance;
-
     return {
       originalPos: new THREE.Vector3(x, y, z),
-      originalRot: new THREE.Euler(randomTiltX, 0, randomTiltZ),
-      treeScale: finalTreeScale,
-      randomSway: {
-        speed: 0.5 + Math.random() * 1.5,
-        offset: Math.random() * 100
-      }
+      originalRot: new THREE.Euler(THREE.MathUtils.lerp(-0.15, -0.45, progress) - Math.random() * 0.1, 0, (Math.random() - 0.5) * 0.4),
+      treeScale: THREE.MathUtils.lerp(1.2, 0.7, progress) * 0.7 * (0.9 + Math.random() * 0.2),
+      randomSway: { speed: 0.5 + Math.random() * 1.5, offset: Math.random() * 100 }
     };
   }, [index, total]);
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (!meshRef.current) return;
-    
-    // --- 1. CALCULATE TREE STATE (Idle) ---
     const orbitSpeed = 0.1;
     const angleOffset = -state.clock.getElapsedTime() * orbitSpeed;
     const currentAngle = Math.atan2(originalPos.z, originalPos.x) + angleOffset;
     const rBase = Math.sqrt(originalPos.x * originalPos.x + originalPos.z * originalPos.z);
-    
-    const treeX = Math.cos(currentAngle) * rBase;
-    const treeZ = Math.sin(currentAngle) * rBase;
-    const treeY = originalPos.y;
-    vec3Tree.set(treeX, treeY, treeZ);
-
+    vec3Tree.set(Math.cos(currentAngle) * rBase, originalPos.y, Math.sin(currentAngle) * rBase);
     const sway = Math.sin(state.clock.elapsedTime * randomSway.speed + randomSway.offset) * 0.03;
-    // Simulate YXZ rotation logic for tree state
     dummy.rotation.set(originalRot.x, -currentAngle + Math.PI / 2, originalRot.z + sway);
     quatTree.copy(dummy.quaternion);
+    const treeScaleVec = dummy.scale.set(treeScale, treeScale, treeScale).clone();
 
-    const treeScaleVec = dummy.scale.set(treeScale, treeScale, treeScale).clone(); // Re-use dummy scale temporarily or just new Vector
-
-
-    // --- 2. CALCULATE CAROUSEL STATE (Exploded) ---
     const isHero = index === heroIndex;
     let offset = index - heroIndex;
     if (offset > total / 2) offset -= total;
     if (offset < -total / 2) offset += total;
-
     const theta = offset * 0.45;
     const radius = 4.2;
-    const cX = Math.sin(theta) * radius;
-    const cZ = -4.5 - (1 - Math.cos(theta)) * 2.0; 
-    
-    // Adjusted Vertical Shift:
-    // Moved up to 0.1 to avoid overlapping the Reset button at bottom-24
-    const verticalShift = isHero ? 0.1 : 0;
-    
-    const cYBase = isHero ? 0 : Math.sin(state.clock.elapsedTime * 0.5 + index) * 0.05;
-    const cY = cYBase + verticalShift;
-
-    // Carousel World Position
-    dummy.position.set(cX, cY, cZ);
+    dummy.position.set(Math.sin(theta) * radius, (isHero ? 0.1 : Math.sin(state.clock.elapsedTime * 0.5 + index) * 0.05) + (isHero ? 0.1 : 0), -4.5 - (1 - Math.cos(theta)) * 2.0);
     dummy.position.applyMatrix4(camera.matrixWorld);
     vec3Carousel.copy(dummy.position);
-
-    // Carousel Rotation (LookAt Camera)
     dummy.lookAt(camera.position);
     quatCarousel.copy(dummy.quaternion);
-
-    // Carousel Scale
-    const scaleFactor = 1.3;
-    const cScaleVal = (isHero ? 1.0 : 0.6) * scaleFactor;
+    const cScaleVal = (isHero ? 1.0 : 0.6) * 1.3;
     const carouselScaleVec = new THREE.Vector3(cScaleVal, cScaleVal, cScaleVal);
 
-
-    // --- 3. BLEND STATES ---
-    // Use wishProgress directly to interpolate. 
-    // This ensures that as soon as Reset is clicked (progress < 1), 
-    // the photo starts moving towards the tree immediately.
     const t = wishProgress;
-
     targetPos.lerpVectors(vec3Tree, vec3Carousel, t);
     targetScale.lerpVectors(treeScaleVec, carouselScaleVec, t);
     targetQuat.copy(quatTree).slerp(quatCarousel, t);
 
-
-    // --- 4. APPLY TO MESH ---
-    // Increased lerp factor from 0.1 to 0.25 for snappier response to state changes.
-    // This reduces the "lag" feel when the hero photo needs to return.
-    const responsiveness = 0.25; 
-
-    meshRef.current.position.lerp(targetPos, responsiveness);
-    meshRef.current.scale.lerp(targetScale, responsiveness);
-    meshRef.current.quaternion.slerp(targetQuat, responsiveness);
+    meshRef.current.position.lerp(targetPos, 0.25);
+    meshRef.current.scale.lerp(targetScale, 0.25);
+    meshRef.current.quaternion.slerp(targetQuat, 0.25);
 
     if (cardMaterialRef.current) {
-       cardMaterialRef.current.emissiveIntensity = THREE.MathUtils.lerp(0.0, 0.2, wishProgress);
+       cardMaterialRef.current.emissiveIntensity = 0.6 + wishProgress * 0.4;
     }
   });
 
   return (
     <group ref={meshRef}>
-      {/* 1. PHYSICAL CARD BODY (Back/Frame) */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[frameWidth, frameHeight, CARD_THICKNESS]} />
         <meshStandardMaterial 
           ref={cardMaterialRef}
-          color="#E0D6C2" /* Matte Khaki/Paper color */
-          roughness={1.0} /* Fully Matte, no reflections */
+          color="#FFFFFF"
+          emissive="#FFFFFF"
+          emissiveIntensity={0.6}
+          roughness={1.0}
           metalness={0.0} 
-          envMapIntensity={0}
-          emissive="#000000"
-          emissiveIntensity={0}
         />
       </mesh>
 
-      {/* 2. GLOSSY PHOTO SURFACE (Front Image) */}
       <mesh position={[0, imageYOffset, CARD_THICKNESS / 2 + 0.001]}>
         <planeGeometry args={[imgWidth, imgHeight]} />
         <meshStandardMaterial 
           ref={photoMaterialRef}
           map={texture} 
-          roughness={0.2} // Decreased roughness to 0.2 for clearer, semi-glossy look
-          metalness={0.0} // Keep as non-metal
-          envMapIntensity={0.9} // Increased slightly to 0.9 for better visibility/clarity without washing out
-          transparent={false}
+          color="#eeeeee"
+          roughness={0.8}
+          metalness={0.0}
           side={THREE.FrontSide}
         />
       </mesh>
+
+      {captionTexture && (
+        <mesh 
+          position={[0, textYOffset, CARD_THICKNESS / 2 + 0.015]}
+          scale={[1, 0.76, 1]} 
+        >
+          <planeGeometry args={[frameWidth * 0.96, borderBottom * 0.9]} />
+          <meshBasicMaterial 
+            map={captionTexture}
+            transparent={true}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
     </group>
   );
 };
@@ -244,10 +277,11 @@ interface PhotoGalleryProps {
 const PhotoGallery: React.FC<PhotoGalleryProps> = ({ wishProgress, heroIndex }) => {
   return (
     <group>
-      {USER_PHOTOS.map((url, i) => (
+      {USER_PHOTOS.map((photo, i) => (
         <PhotoItem 
-          key={url + i} 
-          url={url} 
+          key={photo.url + i} 
+          url={photo.url}
+          caption={photo.caption}
           index={i} 
           wishProgress={wishProgress} 
           heroIndex={heroIndex}

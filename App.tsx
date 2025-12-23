@@ -1,7 +1,39 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Scene from './components/Scene';
 import BackgroundMusic from './components/BackgroundMusic';
 import { USER_PHOTOS } from './constants';
+
+const SnowOverlay: React.FC = () => {
+  const snowflakes = useMemo(() => {
+    return Array.from({ length: 15 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      // Use negative delay to distribute snowflakes immediately on mount
+      delay: `${-Math.random() * 10}s`,
+      size: `${Math.random() * 0.5 + 0.5}rem`,
+      duration: `${Math.random() * 4 + 8}s`,
+    }));
+  }, []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+      {snowflakes.map((snow) => (
+        <div
+          key={snow.id}
+          className="absolute text-white/40 animate-snow"
+          style={{
+            left: snow.left,
+            animationDelay: snow.delay,
+            fontSize: snow.size,
+            animationDuration: snow.duration,
+          }}
+        >
+          ❄
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [isExploded, setIsExploded] = useState(false);
@@ -72,24 +104,25 @@ const App: React.FC = () => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Background Music Control - Now positioned via its own CSS lower down */}
       <BackgroundMusic />
+      {wishProgress < 0.5 && <SnowOverlay />}
 
-      {/* 3D Scene Layer */}
       <div className="absolute inset-0 z-0">
         <Scene wishProgress={wishProgress} heroIndex={heroIndex} />
       </div>
 
-      {/* Overlay UI - Removed bg-black/40 dimming layer to keep scene bright */}
       <div className="absolute inset-0 pointer-events-none transition-all duration-1000 bg-transparent">
-        {/* Header - Moved to top-8 (Swapped with Music Button Area) */}
-        <div className={`absolute top-8 left-0 right-0 text-center px-6 transition-transform duration-700 ${wishProgress > 0.5 ? '-translate-y-20 opacity-0' : 'translate-y-0 opacity-100'}`}>
+        {/* Header - Repositioned and snowflakes added after A WINTER MEMORIES */}
+        <div className={`absolute top-1 left-0 right-0 text-center px-6 transition-transform duration-700 ${wishProgress > 0.5 ? '-translate-y-20 opacity-0' : 'translate-y-0 opacity-100'}`}>
           <h1 className="text-[#D4AF37] text-3xl font-bold tracking-widest drop-shadow-lg mb-2">
             Merry Christmas
           </h1>
-          <p className="text-[#FDF5E6]/60 text-xs tracking-[0.2em] uppercase">
-            A WINTER MEMORIES❄
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[#FDF5E6]/60 text-[10px] tracking-[0.2em] uppercase">
+              A WINTER MEMORIES
+            </span>
+            <span className="text-[#FDF5E6]/40 text-xs animate-pulse">❄</span>
+          </div>
         </div>
 
         {/* Carousel Indicator */}
@@ -101,30 +134,28 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Dynamic Buttons Area - Positioned ABOVE the signature */}
+        {/* Dynamic Buttons Area */}
         <div className="absolute bottom-24 left-0 right-0 flex justify-center items-end pointer-events-auto z-10">
           {!isExploded ? (
             <button
               onClick={toggleExplosion}
-              className="relative group w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform border border-[#D4AF37]/30 bg-black/40 backdrop-blur-md active:scale-90"
+              className="relative group w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 transform border border-[#D4AF37]/60 bg-black/60 backdrop-blur-md shadow-[0_0_20px_rgba(212,175,55,0.2)] active:scale-90"
             >
-              <div className="absolute inset-1 rounded-full border-2 border-[#D4AF37] opacity-20 animate-pulse" />
-              <div className="text-center">
-                <span className="block text-[#D4AF37] text-[10px] font-bold tracking-tighter uppercase mb-0.5">TAP TO</span>
-                <span className="block text-[#FDF5E6] text-sm font-black tracking-widest uppercase">WISH</span>
+              <div className="absolute inset-1 rounded-full border border-[#D4AF37]/80 opacity-30 animate-pulse" />
+              <div className="text-center px-2">
+                <span className="block text-[#FDF5E6] text-xs font-normal tracking-[0.4em] uppercase">轻触许愿</span>
               </div>
             </button>
           ) : (
             <button
               onClick={reset}
-              className="px-8 py-3 rounded-full border border-[#B22222]/50 bg-[#B22222]/10 backdrop-blur-md text-[#FDF5E6] text-xs font-bold tracking-[0.2em] uppercase transition-all active:scale-95 hover:bg-[#B22222]/20 shadow-[0_0_20px_rgba(178,34,34,0.4)]"
+              className="px-8 py-3 rounded-full border border-[#B22222]/50 bg-[#B22222]/10 backdrop-blur-md text-[#FDF5E6] text-sm font-bold tracking-[0.2em] uppercase transition-all active:scale-95 hover:bg-[#B22222]/20 shadow-[0_0_20px_rgba(178,34,34,0.4)]"
             >
-              Reset Tree
+              圣诞树
             </button>
           )}
         </div>
 
-        {/* Static Footer Signature - Always fixed at the bottom */}
         <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-auto z-10">
           <p className={`text-[10px] uppercase tracking-[0.3em] drop-shadow-md transition-colors duration-500 ${isExploded ? 'text-[#FDF5E6]' : 'text-[#FDF5E6]/40'}`}>
             By LEMONH 2025.12.25
@@ -133,7 +164,6 @@ const App: React.FC = () => {
 
       </div>
 
-      {/* Vignette effect - Reduced opacity to prevent edges from looking too dark */}
       <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.5)]" />
     </div>
   );

@@ -1,7 +1,8 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 
 // Updated Resource Link with Commit Hash (93969c5) to bypass CDN cache
-const BGM_URL = "/bgm.mp3";
+const BGM_URL = "https://cdn.jsdelivr.net/gh/lemonh2077/LocalMChristmasTree2@93969c5/bgm.mp3";
 
 const BackgroundMusic: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -73,8 +74,8 @@ const BackgroundMusic: React.FC = () => {
     <button
       onClick={toggle}
       onTouchEnd={(e) => { e.preventDefault(); toggle(e); }}
-      // Position adjusted to top-7 (approx 28px) - a middle ground 
-      className="absolute top-7 right-6 z-50 p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/80 transition-all hover:bg-white/20 active:scale-95 shadow-lg flex items-center justify-center overflow-hidden"
+      // Position adjusted to top-12 (approx 48px) based on user feedback 
+      className="absolute top-12 right-6 z-50 p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/80 transition-all hover:bg-white/20 active:scale-95 shadow-lg flex items-center justify-center overflow-hidden"
       aria-label={isPlaying ? "Mute music" : "Play music"}
     >
       {isPlaying ? (
