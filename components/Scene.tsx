@@ -24,7 +24,7 @@ interface GalleryErrorBoundaryState {
 class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryErrorBoundaryState> {
   constructor(props: GalleryErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false };
+    thi.state = { hasError: false };
   }
 
   static getDerivedStateFromError(error: any): GalleryErrorBoundaryState {
@@ -59,7 +59,7 @@ const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
     <Canvas dpr={[1, 2]} shadows gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
       <color attach="background" args={[COLORS.background]} />
       
-      <Environment files="/env.hdr" path="/" />
+      <Environment files="/env.hdr" />
 
       <PerspectiveCamera makeDefault position={[0, 5, 17]} fov={45} />
       
