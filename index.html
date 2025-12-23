@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <link rel="preload" href="/bgm.mp3" as="audio">
-    <link rel="preload" href="/env.hdr" as="fetch" crossorigin="anonymous">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="referrer" content="no-referrer">
@@ -153,7 +151,7 @@
             0%, 100% { opacity: 0.2; }
             50% { opacity: 0.5; }
         }
-        .animate-pulse { animation: pulse 2 cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
         @keyframes snowfall {
             0% { transform: translateY(-10vh) translateX(0); opacity: 0; }
@@ -170,6 +168,19 @@
         .z-10 { z-index: 10; }
         .z-50 { z-index: 50; }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "three": "https://esm.sh/three@^0.182.0",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <div id="root"></div>

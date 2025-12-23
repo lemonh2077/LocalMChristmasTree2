@@ -15,13 +15,7 @@ interface PhotoItemProps {
 }
 
 const getOptimizedUrl = (url: string) => {
-  // 核心修改：如果是本地路径（以 / 开头），直接返回，不走国外代理
-  if (url.startsWith('/')) {
-    return url;
-  }
-
   try {
-    // 只有网络图片（http开头）才走加速
     return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=1024&q=90&output=webp`;
   } catch (e) {
     return url;
