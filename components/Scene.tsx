@@ -1,6 +1,5 @@
-
-import React, { Suspense, ReactNode, Component } from 'react';
-import { Canvas, ThreeElements } from '@react-three/fiber';
+import React, { Suspense, ReactNode } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera, OrbitControls, Html, Environment } from '@react-three/drei';
 import TreeParticles from './TreeParticles';
 import Decorations from './Decorations';
@@ -21,17 +20,18 @@ interface GalleryErrorBoundaryState {
   hasError: boolean;
 }
 
-class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryErrorBoundaryState> {
+// Fixed: Use React.Component for proper type inheritance of 'state' and 'props'
+class GalleryErrorBoundary extends React.Component<GalleryErrorBoundaryProps, GalleryErrorBoundaryState> {
   constructor(props: GalleryErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: any): GalleryErrorBoundaryState {
+  static getDerivedStateFromError(_error: any): GalleryErrorBoundaryState {
     return { hasError: true };
   }
 
-  componentDidCatch(error: any, errorInfo: any) {
+  componentDidCatch(error: any, _errorInfo: any) {
     console.warn("Gallery partially unavailable:", error.message);
   }
 
@@ -56,19 +56,20 @@ class GalleryErrorBoundary extends Component<GalleryErrorBoundaryProps, GalleryE
 
 const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
   return (
-    <Canvas dpr={[1, 2]} shadows gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
+    <Canvas dpr={[1, 2]} shadows gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
       <color attach="background" args={[COLORS.background]} />
       
       <Environment files="/env.hdr" />
 
       <PerspectiveCamera makeDefault position={[0, 5, 17]} fov={45} />
       
-      {/* Reduced Ambient Light intensity to prevent washing out textures */}
-      <ambientLight intensity={0.4 + wishProgress * 0.4} />
+      {/* Balanced Ambient Light */}
+      <ambientLight intensity={0.5 + wishProgress * 0.3} />
       
-      <pointLight position={[10, 10, 10]} intensity={1.5} color={COLORS.gold} />
-      <pointLight position={[-10, 5, -5]} intensity={1} color={COLORS.ruby} />
-      <pointLight position={[0, 0, 5]} intensity={0.5} color="#fff" />
+      {/* Softened point lights to prevent photo overexposure while keeping highlights */}
+      <pointLight position={[10, 12, 10]} intensity={0.8} color={COLORS.gold} />
+      <pointLight position={[-10, 5, -5]} intensity={0.6} color={COLORS.ruby} />
+      <pointLight position={[0, 2, 8]} intensity={0.4} color="#fff" />
       
       <TreeParticles wishProgress={wishProgress} />
       <Decorations wishProgress={wishProgress} />
