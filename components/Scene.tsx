@@ -63,7 +63,7 @@ const Scene: React.FC<SceneProps> = ({ wishProgress, heroIndex }) => {
     <Canvas dpr={[1, 2]} shadows gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
       <color attach="background" args={[COLORS.background]} />
       
-      <Environment preset="city" />
+      <Environment files="/env.hdr" />
 
       <PerspectiveCamera makeDefault position={[0, 5, 17]} fov={45} />
       
