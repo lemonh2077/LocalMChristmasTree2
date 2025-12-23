@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <link rel="preload" href="/bgm.mp3" as="audio">
+    <link rel="preload" href="/env.hdr" as="fetch" crossorigin="anonymous">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="referrer" content="no-referrer">
@@ -151,7 +153,7 @@
             0%, 100% { opacity: 0.2; }
             50% { opacity: 0.5; }
         }
-        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-pulse { animation: pulse 2 cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
         @keyframes snowDrift {
             0% { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 0; }
@@ -159,7 +161,7 @@
             90% { opacity: 1; }
             100% { transform: translateY(110vh) translateX(30px) rotate(360deg); opacity: 0; }
         }
-        .animate-snow { animation: snowDrift 10s linear infinite; }
+        .animate-snow { animation: snowDrift 10 linear infinite; }
 
         .drop-shadow-lg { filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.04)) drop-shadow(0 4px 3px rgba(0, 0, 0, 0.1)); }
         .drop-shadow-md { filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.07)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.06)); }
@@ -169,18 +171,6 @@
         .z-10 { z-index: 10; }
         .z-50 { z-index: 50; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "three": "https://esm.sh/three@^0.182.0",
-    "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
-    "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7"
-  }
-}
-</script>
 <link rel="stylesheet" href="/index.css">
 </head>
 <body>
