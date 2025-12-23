@@ -72,7 +72,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
     while (items.length < targetCount && attempts < maxAttempts) {
       attempts++;
       
-      // h is normalized height [0, 1]. 0.9 means top 10% is empty.
       const h = Math.random() * 0.85 + 0.05; 
       if (h > 0.75 && Math.random() > 0.4) continue;
 
@@ -137,7 +136,6 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
     const count = 52; 
     
     for (let i = 0; i < count; i++) {
-        // Limit h to 0.9 to avoid top area
         let h = Math.random() * 0.9; 
 
         if (h > 0.75 && Math.random() > 0.3) {
@@ -177,33 +175,31 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
 
   // --- RIBBON PARTICLES ---
   const [ribbonPositions, ribbonScatterPositions, ribbonColors] = useMemo(() => {
-    const pointsCount = 6000; 
+    const pointsCount = 7500; // Increased count for denser ribbon
     const loops = 6.5;
     
     const curvePoints = [];
     const colorValues = [];
-    const color1 = new THREE.Color(COLORS.gold);
-    const color2 = new THREE.Color(COLORS.goldAmber);
+    const color1 = new THREE.Color(COLORS.gold).multiplyScalar(1.5); // Brighter
+    const color2 = new THREE.Color(COLORS.goldAmber).multiplyScalar(1.5); // Brighter
     
     for (let i = 0; i < pointsCount; i++) {
       const t = i / pointsCount;
-      // Top height is TREE_HEIGHT/2 - 1.0 = 4.0. Tree top is 5.0. This is 1.0 units (10%) clear.
       const h = THREE.MathUtils.lerp(-TREE_HEIGHT/2 + 0.5, TREE_HEIGHT/2 - 1.0, t);
       const normalizedH = (h + TREE_HEIGHT/2) / TREE_HEIGHT;
       const radiusAtH = (1 - normalizedH) * TREE_RADIUS;
-      
       const r = radiusAtH + 0.15; 
-      
       const angle = t * Math.PI * 2 * loops;
       
       const x = Math.cos(angle) * r;
       const z = Math.sin(angle) * r;
       curvePoints.push(x, h, z);
 
-      // Colors
+      // Colors with random variations to look like sparkles
       const mix = Math.random();
       const c = mix > 0.5 ? color1 : color2;
-      colorValues.push(c.r, c.g, c.b, 1.0);
+      const brightness = 0.8 + Math.random() * 0.5;
+      colorValues.push(c.r * brightness, c.g * brightness, c.b * brightness, 1.0);
     }
 
     const scatterPoints = [];
@@ -213,14 +209,12 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
         const v = Math.random();
         const theta = 2 * Math.PI * u;
         const phi = Math.acos(2 * v - 1);
-        
         const x = sr * Math.sin(phi) * Math.cos(theta);
         const y = sr * Math.sin(phi) * Math.sin(theta);
         const z = sr * Math.cos(phi);
         scatterPoints.push(x, y, z);
     }
 
-    // Fixed: scatterPositions renamed to scatterPoints as defined in the block above
     return [new Float32Array(curvePoints), new Float32Array(scatterPoints), new Float32Array(colorValues)];
   }, []);
 
@@ -377,16 +371,16 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
 
     // 4. Main Star Update
     if (starRef.current) {
-        starRef.current.rotation.y += delta * rotationSpeed;
+        starRef.current.rotation.y += delta * rotationSpeed * 2.0;
         starRef.current.position.lerpVectors(starOriginalPos, starTargetPos, wishProgress);
-        const starVisibleScale = THREE.MathUtils.lerp(0.6, 0.0, wishProgress);
+        const starVisibleScale = THREE.MathUtils.lerp(0.65, 0.0, wishProgress);
         starRef.current.scale.setScalar(starVisibleScale);
-        starRef.current.rotation.z = Math.sin(state.clock.elapsedTime) * 0.1 * wishProgress;
+        starRef.current.rotation.z = Math.sin(state.clock.elapsedTime) * 0.1;
         const mat = starRef.current.material as THREE.MeshStandardMaterial;
         if (mat) {
              const t = state.clock.elapsedTime;
              mat.opacity = THREE.MathUtils.lerp(1.0, 0.0, wishProgress);
-             mat.emissiveIntensity = 0.5 + Math.sin(t * 1.5) * 0.2; 
+             mat.emissiveIntensity = 2.0 + Math.sin(t * 3.0) * 1.0; 
         }
     }
   });
@@ -400,15 +394,23 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
               <group>
                 <mesh>
                   <boxGeometry args={[1, 1, 1]} />
-                  <meshStandardMaterial color={COLORS.ruby} metalness={0.6} roughness={0.2} transparent opacity={1} />
+                  <meshStandardMaterial 
+                    color={COLORS.ruby} 
+                    emissive={COLORS.ruby} 
+                    emissiveIntensity={0.8}
+                    metalness={0.6} 
+                    roughness={0.2} 
+                    transparent 
+                    opacity={1} 
+                  />
                 </mesh>
                 <mesh>
                   <boxGeometry args={[0.25, 1.01, 1.01]} />
-                  <meshStandardMaterial color={COLORS.gold} metalness={1.0} roughness={0.1} transparent opacity={1} />
+                  <meshStandardMaterial color={COLORS.gold} emissive={COLORS.gold} emissiveIntensity={1.0} metalness={1.0} roughness={0.1} transparent opacity={1} />
                 </mesh>
                 <mesh>
                   <boxGeometry args={[1.01, 1.01, 0.25]} />
-                  <meshStandardMaterial color={COLORS.gold} metalness={1.0} roughness={0.1} transparent opacity={1} />
+                  <meshStandardMaterial color={COLORS.gold} emissive={COLORS.gold} emissiveIntensity={1.0} metalness={1.0} roughness={0.1} transparent opacity={1} />
                 </mesh>
               </group>
             ) : orn.type === 'star' ? (
@@ -416,7 +418,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
                 <meshStandardMaterial 
                     color="#FFD700"
                     emissive="#FFA500"
-                    emissiveIntensity={0.6}
+                    emissiveIntensity={2.5}
                     metalness={1.0}
                     roughness={0.1}
                     transparent
@@ -426,7 +428,16 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
             ) : (
               <mesh>
                 <sphereGeometry args={[1, 32, 32]} />
-                <meshStandardMaterial color={orn.color} metalness={0.9} roughness={0.1} envMapIntensity={1.5} transparent opacity={1} />
+                <meshStandardMaterial 
+                    color={orn.color} 
+                    emissive={orn.color} 
+                    emissiveIntensity={0.6}
+                    metalness={0.9} 
+                    roughness={0.1} 
+                    envMapIntensity={2.0} 
+                    transparent 
+                    opacity={1} 
+                />
               </mesh>
             )}
           </group>
@@ -440,8 +451,8 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
                   <meshStandardMaterial 
                       color="#FFFFFF" 
                       emissive="#FFFFFF" 
-                      emissiveIntensity={4.0} 
-                      roughness={0.35} 
+                      emissiveIntensity={5.0} 
+                      roughness={0.3} 
                       metalness={0.2} 
                       transparent
                       opacity={1}
@@ -467,7 +478,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
           </bufferGeometry>
           <pointsMaterial 
               map={particleTexture || undefined}
-              size={0.08}
+              size={0.1}
               transparent
               vertexColors
               opacity={1}
@@ -487,7 +498,7 @@ const Decorations: React.FC<DecorationsProps> = ({ wishProgress }) => {
         <meshStandardMaterial 
             color="#FFD700"
             emissive="#FFA500"
-            emissiveIntensity={0.6}
+            emissiveIntensity={3.0}
             metalness={1.0}
             roughness={0.1}
             envMapIntensity={2.5}
