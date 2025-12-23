@@ -42,7 +42,6 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // High resolution for crisp text
     canvas.width = 1024; 
     canvas.height = 256;
 
@@ -52,14 +51,11 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
 
     const drawText = (fontSize: number) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Deepest Black Ink
       ctx.fillStyle = '#000000';
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.4; 
       ctx.globalAlpha = 1.0; 
       
-      // 1. Letter Spacing: Increased further to 3.5px for better breathing room
       if ('letterSpacing' in ctx) {
         (ctx as any).letterSpacing = '3.5px'; 
       }
@@ -67,7 +63,6 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
       const fontStack = '"Ma Shan Zheng", "STXingkai", "Xingkai SC", "Kaiti SC", "STKaiti", "KaiTi", cursive, serif';
       ctx.font = `${fontSize}px ${fontStack}`;
       
-      // Reduced horizontal padding slightly to allow more space for the wider characters
       const horizontalPadding = 70; 
       const verticalPadding = 20;
       const maxWidth = canvas.width - horizontalPadding * 2;
@@ -91,7 +86,6 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
       }
       lines.push(line);
 
-      // 3. Line Height: Increased for much more breathing room (1.5x)
       const lineHeight = fontSize * 1.5;
       lines.forEach((l, i) => {
         const y = verticalPadding + i * lineHeight;
@@ -99,12 +93,10 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
         ctx.strokeText(l, horizontalPadding, y); 
       });
 
-      // Render Date (Signature Style)
       if (dateText) {
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
         if ('letterSpacing' in ctx) (ctx as any).letterSpacing = '1.5px'; 
-        // 4. Date Font Size: Increased to match the request (1.1x of main font)
         ctx.font = `${fontSize * 1.1}px ${fontStack}`;
         ctx.fillText(dateText, canvas.width - horizontalPadding, canvas.height - verticalPadding / 2);
         ctx.strokeText(dateText, canvas.width - horizontalPadding, canvas.height - verticalPadding / 2);
@@ -228,7 +220,8 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
     meshRef.current.quaternion.slerp(targetQuat, 0.25);
 
     if (cardMaterialRef.current) {
-       cardMaterialRef.current.emissiveIntensity = 0.6 + wishProgress * 0.4;
+       // Reduced emissive intensity to prevent blooming over the photo face
+       cardMaterialRef.current.emissiveIntensity = 0.4 + wishProgress * 0.2;
     }
   });
 
@@ -240,8 +233,8 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
           ref={cardMaterialRef}
           color="#FFFFFF"
           emissive="#FFFFFF"
-          emissiveIntensity={0.6}
-          roughness={1.0}
+          emissiveIntensity={0.4}
+          roughness={0.9} // Higher roughness to reduce sharp reflections
           metalness={0.0} 
         />
       </mesh>
@@ -251,10 +244,11 @@ const PhotoItem: React.FC<PhotoItemProps> = ({ url, caption, index, wishProgress
         <meshStandardMaterial 
           ref={photoMaterialRef}
           map={texture} 
-          color="#eeeeee"
-          roughness={0.8}
+          color="#ffffff"
+          roughness={1.0} // Maximum roughness to avoid overexposure from direct point lights
           metalness={0.0}
           side={THREE.FrontSide}
+          envMapIntensity={0.5} // Lower environment reflection on photos
         />
       </mesh>
 
@@ -283,17 +277,29 @@ interface PhotoGalleryProps {
 const PhotoGallery: React.FC<PhotoGalleryProps> = ({ wishProgress, heroIndex }) => {
   return (
     <group>
-      {USER_PHOTOS.map((photo, i) => (
-        <PhotoItem 
-          key={photo.url + i} 
-          url={photo.url}
-          caption={photo.caption}
-          index={i} 
-          wishProgress={wishProgress} 
-          heroIndex={heroIndex}
-          total={USER_PHOTOS.length}
-        />
-      ))}
+      {USER_PHOTOS.map((photoEntry, i) => {
+        // 1. 兼容处理：判断 constants.ts 里存的是“字符串”还是“对象”
+        // 如果是字符串(我们现在的写法)，直接用；如果是对象，取 .url
+        const url = typeof photoEntry === 'string' ? photoEntry : (photoEntry as any).url;
+        
+        // 2. 默认文案：因为我们 constants.ts 里没有配文字，这里给个默认的日期和祝福
+        // 这样 PhotoItem 里的文字渲染逻辑就不会报错
+        const caption = typeof photoEntry === 'string' 
+          ? `2025.12.25 Memory ${i + 1}` 
+          : (photoEntry as any).caption;
+
+        return (
+          <PhotoItem 
+            key={url + i} 
+            url={url}
+            caption={caption}
+            index={i} 
+            wishProgress={wishProgress} 
+            heroIndex={heroIndex}
+            total={USER_PHOTOS.length}
+          />
+        );
+      })}
     </group>
   );
 };
